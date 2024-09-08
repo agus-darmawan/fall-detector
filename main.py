@@ -1,10 +1,18 @@
 import cv2
+import numpy as np
+from sensor_msgs.msg import CompressedImage,Image
+from std_msgs.msg import String
+import rospy
 import cvzone
+from cv_bridge import CvBridge, CvBridgeError
+import pickle as pkl
+import json
 import math
 from ultralytics import YOLO
 
-cap = cv2.VideoCapture('fall.mp4')
-
+cap = cv2.VideoCapture(0)
+bridge = CvBridge()
+imgPublisher = rospy.Publisher('object_image/image_raw', Image, queue_size=1)
 model = YOLO('yolov8s.pt')
 
 classnames = []
@@ -14,7 +22,7 @@ with open('classes.txt', 'r') as f:
 
 while True:
     ret, frame = cap.read()
-    frame = cv2.resize(frame, (980,740))
+    frame = cv2.resize(frame, (1920,1080))
 
     results = model(frame)
 
@@ -44,7 +52,11 @@ while True:
             
             else:pass
 
-
+    try:            
+        imgMsg = bridge.cv2_to_imgmsg(frame,'bgr8')
+        imgPublisher.publish(imgMsg)
+    except CvBridgeError as err:
+        print(err)
     cv2.imshow('frame', frame)
     if cv2.waitKey(1) & 0xFF == ord('t'):
         break
